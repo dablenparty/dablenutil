@@ -1,5 +1,5 @@
 use const_format::formatcp;
-use std::env;
+use std::{env, fs::create_dir_all, io, path::Path};
 
 /// Gets a platform-specific executable name based on the `CARGO_PKG_NAME` environment variable.
 ///
@@ -25,4 +25,32 @@ pub const fn platform_specific_executable_name() -> &'static str {
         env::consts::ARCH,
         env::consts::EXE_SUFFIX
     )
+}
+
+/// Synchronously creates a directory and all of its parent directories if they don't exist.
+/// If the directory already exists, the error is ignored.
+///
+/// # Examples
+/// ```
+/// use dablenutil::create_dir_if_not_exists;
+///
+/// # fn main() -> std::io::Result<()> {
+/// let path = std::path::Path::new("path/to/dir");
+/// assert_eq!(false, path.exists());
+/// create_dir_if_not_exists(path)?;
+/// assert_eq!(true, path.exists());
+/// # std::fs::remove_dir_all("path")?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn create_dir_if_not_exists(dir: &Path) -> io::Result<()> {
+    if let Err(e) = create_dir_all(dir) {
+        if e.kind() == io::ErrorKind::AlreadyExists {
+            Ok(())
+        } else {
+            Err(e)
+        }
+    } else {
+        Ok(())
+    }
 }

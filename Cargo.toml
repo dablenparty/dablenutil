@@ -7,5 +7,10 @@ description = "A collection of common utility functions used across dablenparty 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+tokio = ["dep:tokio"]
+
 [dependencies]
 const_format = "0.2.30"
+dunce = "1.0.3"
+tokio = { version = "1.21.2", optional = true, features = ["fs", "macros", "rt-multi-thread"] }

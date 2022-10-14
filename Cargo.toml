@@ -8,3 +8,4 @@ description = "A collection of common utility functions used across dablenparty 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+const_format = "0.2.30"

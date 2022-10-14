@@ -1,0 +1,10 @@
+[package]
+name = "dablenutil"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A collection of common utility functions used across dablenparty projects"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

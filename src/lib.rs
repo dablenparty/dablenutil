@@ -1,5 +1,10 @@
+#![warn(clippy::all, clippy::pedantic)]
+
 use const_format::formatcp;
 use std::{env, fs::create_dir_all, io, path::Path};
+
+#[cfg(feature = "tokio")]
+pub mod tokio;
 
 /// Gets a platform-specific executable name based on the `CARGO_PKG_NAME` environment variable.
 ///
@@ -16,6 +21,7 @@ use std::{env, fs::create_dir_all, io, path::Path};
 /// let expected_name = format!("{}_{}_{}{}", CARGO_PKG_NAME, OS, ARCH, EXE_SUFFIX);
 /// assert_eq!(expected_name, executable_name);
 /// ```
+#[must_use]
 pub const fn platform_specific_executable_name() -> &'static str {
     const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
     formatcp!(
@@ -29,6 +35,16 @@ pub const fn platform_specific_executable_name() -> &'static str {
 
 /// Synchronously creates a directory and all of its parent directories if they don't exist.
 /// If the directory already exists, the error is ignored.
+///
+/// # Arguments
+///
+/// * `dir` - The path to the directory to create.
+///
+/// # Errors
+///
+/// An error is returned if the directory could not be created for some reason
+/// (see `fs::create_dir_all` for more information), ignoring the error when the
+/// directory already exists.
 ///
 /// # Examples
 /// ```

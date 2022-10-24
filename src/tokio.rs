@@ -18,7 +18,7 @@ use std::path::Path;
 /// use dablenutil::tokio::async_create_dir_if_not_exists;
 ///
 /// # #[tokio::main]
-/// # async fn main() -> std::io::Result<()> {
+/// # async fn main() -> dablenutil::Result<()> {
 /// let path = std::path::Path::new("path/to/dir");
 /// assert_eq!(false, path.exists());
 /// async_create_dir_if_not_exists(path).await?;
@@ -27,12 +27,12 @@ use std::path::Path;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn async_create_dir_if_not_exists(dir_path: &Path) -> std::io::Result<()> {
+pub async fn async_create_dir_if_not_exists(dir_path: &Path) -> crate::Result<()> {
     if let Err(e) = tokio::fs::create_dir_all(dir_path).await {
         if e.kind() == std::io::ErrorKind::AlreadyExists {
             Ok(())
         } else {
-            Err(e)
+            Err(e.into())
         }
     } else {
         Ok(())

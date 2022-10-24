@@ -8,9 +8,12 @@ pub mod logging;
 #[cfg(feature = "tokio")]
 pub mod tokio;
 
+/// A custom error type for this crate.
 #[derive(Debug)]
 pub enum Error {
+    /// Wraps an `io::Error`.
     Io(io::Error),
+    /// Wraps an error from `simplelog`.
     #[cfg(feature = "logging")]
     Logging(log::SetLoggerError),
 }

@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "A collection of common utility functions used across dablenparty projects"
+repository = "https://github.com/dablenparty/dablenutil"
+homepage = "https://github.com/dablenparty/dablenutil"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

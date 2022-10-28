@@ -24,6 +24,8 @@ use crate::create_dir_if_not_exists;
 /// # Arguments
 ///
 /// * `log_folder` - The path to the directory where the logs are stored.
+/// * `package_name` - An optional package name to prepend to the log archives.
+/// An underscore `_` will be appended to it as well. See the Examples for more.
 ///
 /// # Errors
 ///
@@ -41,21 +43,28 @@ use crate::create_dir_if_not_exists;
 /// # fn main() -> dablenutil::Result<()> {
 /// let log_path = PathBuf::from("./path/to/logs");
 /// # assert_eq!(false, log_path.exists());
-/// let log_file = rotate_logs(&log_path)?;
+/// let package_name = env!("CARGO_PKG_NAME");
+/// let log_file = rotate_logs(&log_path, Some(package_name))?;
 /// # assert!(log_file.ends_with("latest.log"));
 /// # assert!(log_path.exists());
 /// # fs::write(&log_file, "Hello, world!")?;
-/// # let second_log_file = rotate_logs(&log_path)?;
-/// # let zipped_archive_exists = log_path
-/// #     .read_dir()?
-/// #     .filter_map(|r| r.ok())
-/// #     .any(|e| e.file_name().to_string_lossy().ends_with(".log.gz"));
+/// # let second_log_file = rotate_logs(&log_path, Some(package_name))?;
+/// let prefix = format!("{}_", package_name);
+/// let zipped_archive_exists = log_path
+///     .read_dir()?
+///     .filter_map(|r| r.ok())
+///     .any(|e| {
+///         let file_name = e.file_name();
+///         let encoded = file_name.to_string_lossy();
+///         encoded.starts_with(&prefix)
+///         && encoded.ends_with(".log.gz")
+///     });
 /// # assert!(zipped_archive_exists);
 /// # fs::remove_dir_all(&log_path)?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn rotate_logs(log_folder: &Path) -> crate::Result<PathBuf> {
+pub fn rotate_logs(log_folder: &Path, package_name: Option<&str>) -> crate::Result<PathBuf> {
     create_dir_if_not_exists(&log_folder)?;
     let latest_log_file = log_folder.join("latest.log");
     if latest_log_file.exists() {
@@ -63,9 +72,13 @@ pub fn rotate_logs(log_folder: &Path) -> crate::Result<PathBuf> {
             .metadata()?
             .created()
             .map_or_else(|_| Local::now(), DateTime::<Local>::from);
-        let package_name = env!("CARGO_PKG_NAME");
+        let prefix = if let Some(name) = package_name {
+            format!("{}_", name)
+        } else {
+            "".to_string()
+        };
         let dated_name = create_time
-            .format(&format!("{}_%Y-%m-%d_%H-%M-%S.log", package_name))
+            .format(&format!("{}%Y-%m-%d_%H-%M-%S.log", prefix))
             .to_string();
         let archive_path = log_folder.join(format!("{}.gz", dated_name));
         let file_handle = fs::File::create(archive_path)?;

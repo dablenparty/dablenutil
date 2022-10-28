@@ -14,8 +14,10 @@ use simplelog::{
 
 use crate::create_dir_if_not_exists;
 
-/// Zip up the previous logs and start a new log file.
-/// This returns the path to the new log file.
+/// Zip up the previous logs and start a new log file, returning
+/// the path to the new log file.
+///
+/// The logs are zipped with `gzip` and `flate2`, 
 ///
 /// returns: `io::Result<PathBuf>`
 ///
@@ -27,7 +29,33 @@ use crate::create_dir_if_not_exists;
 ///
 /// An error is returned if the directory could not be created, the log file metadata could not be
 /// retrieved, or the log file could not be renamed.
-fn rotate_logs(log_folder: &Path) -> crate::Result<PathBuf> {
+///
+/// # Examples
+///
+/// ```
+/// use dablenutil::logging::rotate_logs;
+/// use log::info;
+/// use std::path::PathBuf;
+/// use std::fs;
+///
+/// # fn main() -> dablenutil::Result<()> {
+/// let log_path = PathBuf::from("./path/to/logs");
+/// # assert_eq!(false, log_path.exists());
+/// let log_file = rotate_logs(&log_path)?;
+/// # assert!(log_file.ends_with("latest.log"));
+/// # assert!(log_path.exists());
+/// # fs::write(&log_file, "Hello, world!")?;
+/// # let second_log_file = rotate_logs(&log_path)?;
+/// # let zipped_archive_exists = log_path
+/// #     .read_dir()?
+/// #     .filter_map(|r| r.ok())
+/// #     .any(|e| e.file_name().to_string_lossy().ends_with(".log.gz"));
+/// # assert!(zipped_archive_exists);
+/// # fs::remove_dir_all(&log_path)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn rotate_logs(log_folder: &Path) -> crate::Result<PathBuf> {
     create_dir_if_not_exists(&log_folder)?;
     let latest_log_file = log_folder.join("latest.log");
     if latest_log_file.exists() {
@@ -52,11 +80,15 @@ fn rotate_logs(log_folder: &Path) -> crate::Result<PathBuf> {
     Ok(latest_log_file)
 }
 
-/// Initialize the logger with `simplelog`.
+/// Initialize the logger with `simplelog`. Logs are outputted to the terminal
+/// as well as the specified file.
+///
+/// This will create a new log file at the given path, but will not rotate the
+/// logs. There is a dedicated function for that, [`rotate_logs`](fn@rotate_logs)
 ///
 /// # Arguments
 ///
-/// * `log_folder` - The path to the folder where the log files will be stored.
+/// * `log_path` - The path to the log file.
 /// * `level_filter` - The log level to use.
 ///
 /// # Errors
@@ -69,23 +101,25 @@ fn rotate_logs(log_folder: &Path) -> crate::Result<PathBuf> {
 /// use dablenutil::logging::init_simple_logger;
 ///
 /// # fn main() -> dablenutil::Result<()> {
-/// let path = std::path::Path::new("path/to/logs");
+/// let path = std::path::Path::new("./path/to/file.log");
 /// # assert_eq!(false, path.exists());
 /// init_simple_logger(path, log::LevelFilter::Info)?;
+/// log::info!("Hello, world!");
 /// # assert_eq!(true, path.exists());
-/// # assert_eq!(true, path.join("latest.log").exists());
 /// # std::fs::remove_dir_all("path")?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn init_simple_logger(log_folder: &Path, level_filter: LevelFilter) -> crate::Result<()> {
+pub fn init_simple_logger(log_path: &Path, level_filter: LevelFilter) -> crate::Result<()> {
     let config = simplelog::ConfigBuilder::new()
         .set_time_format_custom(format_description!("[[[hour]:[minute]:[second]]"))
         .set_thread_mode(ThreadLogMode::Both)
         .set_target_level(LevelFilter::Off)
         .set_thread_level(LevelFilter::Error)
         .build();
-    let log_path = rotate_logs(log_folder)?;
+    log_path
+        .parent()
+        .map_or_else(|| Ok(()), |p| create_dir_if_not_exists(p))?;
     let log_file = fs::File::create(log_path)?;
     CombinedLogger::init(vec![
         TermLogger::new(

@@ -1,3 +1,7 @@
+//! Contains logging utilities. This module is only available when the `logging` feature is enabled.
+//!
+//! Currently, this module contains a function to initialize a logger and a function to rotate logs.
+
 use std::{
     fs,
     io::Write,
@@ -17,7 +21,7 @@ use crate::create_dir_if_not_exists;
 /// Zip up the previous logs and start a new log file, returning
 /// the path to the new log file.
 ///
-/// The logs are zipped with `gzip` and `flate2`, 
+/// The logs are zipped with `gzip` and `flate2`.
 ///
 /// returns: `io::Result<PathBuf>`
 ///
@@ -42,23 +46,23 @@ use crate::create_dir_if_not_exists;
 ///
 /// # fn main() -> dablenutil::Result<()> {
 /// let log_path = PathBuf::from("./path/to/logs");
-/// # assert_eq!(false, log_path.exists());
+/// # assert!(!log_path.exists());
 /// let package_name = env!("CARGO_PKG_NAME");
 /// let log_file = rotate_logs(&log_path, Some(package_name))?;
 /// # assert!(log_file.ends_with("latest.log"));
 /// # assert!(log_path.exists());
 /// # fs::write(&log_file, "Hello, world!")?;
 /// # let second_log_file = rotate_logs(&log_path, Some(package_name))?;
-/// let prefix = format!("{}_", package_name);
-/// let zipped_archive_exists = log_path
-///     .read_dir()?
-///     .filter_map(|r| r.ok())
-///     .any(|e| {
-///         let file_name = e.file_name();
-///         let encoded = file_name.to_string_lossy();
-///         encoded.starts_with(&prefix)
-///         && encoded.ends_with(".log.gz")
-///     });
+/// # let prefix = format!("{}_", package_name);
+/// # let zipped_archive_exists = log_path
+/// #     .read_dir()?
+/// #     .filter_map(|r| r.ok())
+/// #     .any(|e| {
+/// #         let file_name = e.file_name();
+/// #         let encoded = file_name.to_string_lossy();
+/// #         encoded.starts_with(&prefix)
+/// #         && encoded.ends_with(".log.gz")
+/// #     });
 /// # assert!(zipped_archive_exists);
 /// # fs::remove_dir_all(&log_path)?;
 /// # Ok(())
@@ -115,10 +119,10 @@ pub fn rotate_logs(log_folder: &Path, package_name: Option<&str>) -> crate::Resu
 ///
 /// # fn main() -> dablenutil::Result<()> {
 /// let path = std::path::Path::new("./path/to/file.log");
-/// # assert_eq!(false, path.exists());
+/// # assert!(!path.exists());
 /// init_simple_logger(path, log::LevelFilter::Info)?;
 /// log::info!("Hello, world!");
-/// # assert_eq!(true, path.exists());
+/// # assert!(path.exists());
 /// # std::fs::remove_dir_all("path")?;
 /// # Ok(())
 /// # }

@@ -1,3 +1,16 @@
+//! A collection of utilities for my Rust projects.
+//!
+//! This crate is a collection of utilities that I use in my Rust projects. It is not intended to be
+//! used by anyone else, but I have made it public in case anyone else finds it useful.
+//! While I try to keep this crate as stable as possible, I make no guarantees about the stability of
+//! the API. As such, I recommend that you use a specific version of this crate in your `Cargo.toml`.
+//! Being a student, I don't have time for maintaining a crate as insignificant as this one.
+//!
+//! # Features
+//!
+//! * `logging` - Enables the `logging` module.
+//! * `tokio` - Enables the `tokio` module for async utils.
+
 #![warn(clippy::all, clippy::pedantic)]
 
 use const_format::formatcp;
@@ -93,7 +106,7 @@ pub const fn platform_specific_executable_name() -> &'static str {
 /// let path = std::path::Path::new("path/to/dir");
 /// # assert_eq!(false, path.exists());
 /// create_dir_if_not_exists(path)?;
-/// # assert_eq!(true, path.exists());
+/// assert!(path.exists());
 /// # std::fs::remove_dir_all("path")?;
 /// # Ok(())
 /// # }

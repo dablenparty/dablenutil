@@ -1,3 +1,5 @@
+//! Async `tokio` utilities. Only available when the `tokio` feature is enabled.
+
 use std::path::Path;
 
 /// Asynchronously creates a directory and all of its parent directories if they don't exist.

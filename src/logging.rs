@@ -19,7 +19,7 @@ use simplelog::{
 use crate::create_dir_if_not_exists;
 
 pub struct LoggingConfig {
-    log_path: PathBuf,
+    log_folder: PathBuf,
     term_level_filter: LevelFilter,
     file_level_filter: LevelFilter,
     package_name: String,
@@ -43,14 +43,14 @@ impl LoggingConfig {
     /// # use log::LevelFilter;
     /// # use std::path::PathBuf;
     /// let config = LoggingConfig::new(PathBuf::from("./path/to/log/file.log"));
-    /// assert_eq!(config.get_log_path(), PathBuf::from("./path/to/log/file.log"));
+    /// assert_eq!(config.get_log_folder(), PathBuf::from("./path/to/log/file.log"));
     /// assert_eq!(config.get_term_level_filter(), log::LevelFilter::Info);
     /// assert_eq!(config.get_file_level_filter(), log::LevelFilter::Info);
     /// assert_eq!(config.get_package_name(), env!("CARGO_PKG_NAME"));
     /// ```
     pub fn new(path: PathBuf) -> Self {
         Self {
-            log_path: path,
+            log_folder: path,
             term_level_filter: LevelFilter::Info,
             file_level_filter: LevelFilter::Info,
             package_name: env!("CARGO_PKG_NAME").to_string(),
@@ -58,8 +58,8 @@ impl LoggingConfig {
     }
 
     /// Get the path to the log file.
-    pub fn get_log_path(&self) -> &Path {
-        &self.log_path
+    pub fn get_log_folder(&self) -> &Path {
+        &self.log_folder
     }
 
     /// Gets the current level filter for the terminal logger.
@@ -156,21 +156,21 @@ impl LoggingConfig {
 /// # Examples
 ///
 /// ```
-/// use dablenutil::logging::rotate_logs;
+/// use dablenutil::logging::{LoggingConfig, rotate_logs};
 /// use log::info;
 /// use std::path::PathBuf;
 /// use std::fs;
 ///
 /// # fn main() -> dablenutil::Result<()> {
 /// let log_path = PathBuf::from("./path/to/logs");
+/// let config = LoggingConfig::new(log_path.clone());
 /// # assert!(!log_path.exists());
-/// let package_name = env!("CARGO_PKG_NAME");
-/// let log_file = rotate_logs(&log_path, Some(package_name))?;
+/// let log_file = rotate_logs(&config)?;
 /// # assert!(log_file.ends_with("latest.log"));
 /// # assert!(log_path.exists());
 /// # fs::write(&log_file, "Hello, world!")?;
-/// # let second_log_file = rotate_logs(&log_path, Some(package_name))?;
-/// # let prefix = format!("{}_", package_name);
+/// # let second_log_file = rotate_logs(&config)?;
+/// # let prefix = format!("{}_", config.get_package_name());
 /// # let zipped_archive_exists = log_path
 /// #     .read_dir()?
 /// #     .filter_map(|r| r.ok())
@@ -185,7 +185,8 @@ impl LoggingConfig {
 /// # Ok(())
 /// # }
 /// ```
-pub fn rotate_logs(log_folder: &Path, package_name: Option<&str>) -> crate::Result<PathBuf> {
+pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
+    let log_folder = config.get_log_folder();
     create_dir_if_not_exists(&log_folder)?;
     let latest_log_file = log_folder.join("latest.log");
     if latest_log_file.exists() {
@@ -193,10 +194,13 @@ pub fn rotate_logs(log_folder: &Path, package_name: Option<&str>) -> crate::Resu
             .metadata()?
             .created()
             .map_or_else(|_| Local::now(), DateTime::<Local>::from);
-        let prefix = if let Some(name) = package_name {
-            format!("{}_", name)
-        } else {
-            "".to_string()
+        let prefix = {
+            let package_name = config.get_package_name();
+            if package_name.is_empty() {
+                String::new()
+            } else {
+                format!("{}_", package_name)
+            }
         };
         let dated_name = create_time
             .format(&format!("{}%Y-%m-%d_%H-%M-%S.log", prefix))

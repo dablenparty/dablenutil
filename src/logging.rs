@@ -156,13 +156,14 @@ impl LoggingConfig {
 /// # Examples
 ///
 /// ```
-/// use dablenutil::logging::{LoggingConfig, rotate_logs};
-/// use log::info;
-/// use std::path::PathBuf;
-/// use std::fs;
+/// # use dablenutil::logging::{LoggingConfig, rotate_logs};
+/// # use log::info;
+/// # use std::path::PathBuf;
+/// # use std::fs;
 ///
 /// # fn main() -> dablenutil::Result<()> {
 /// let log_path = PathBuf::from("./path/to/logs");
+/// // path cloned for testing purposes
 /// let config = LoggingConfig::new(log_path.clone());
 /// # assert!(!log_path.exists());
 /// let log_file = rotate_logs(&config)?;
@@ -236,12 +237,13 @@ pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
 ///
 /// # Examples
 /// ```
-/// use dablenutil::logging::{LoggingConfig, init_simple_logger};
+/// # use dablenutil::logging::{LoggingConfig, init_simple_logger};
 ///
 /// # fn main() -> dablenutil::Result<()> {
-/// let path = std::path::Path::new("./path/to/file.log");
+/// let path = std::path::PathBuf::from("./path/to/file.log");
 /// # assert!(!path.exists());
-/// let config = LoggingConfig::new(path.to_path_buf());
+/// // path cloned for testing purposes
+/// let config = LoggingConfig::new(path.clone());
 /// init_simple_logger(&config)?;
 /// log::info!("Hello, world!");
 /// # assert!(path.exists());

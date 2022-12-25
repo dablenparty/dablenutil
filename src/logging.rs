@@ -18,6 +18,123 @@ use simplelog::{
 
 use crate::create_dir_if_not_exists;
 
+pub struct LoggingConfig {
+    log_path: PathBuf,
+    term_level_filter: LevelFilter,
+    file_level_filter: LevelFilter,
+    package_name: String,
+}
+
+impl LoggingConfig {
+    /// Constructs a new `LoggingConfig` with the default values.
+    /// The default values are:
+    /// * `log_path`: given as parameter
+    /// * `term_level_filter`: `LevelFilter::Info`
+    /// * `file_level_filter`: `LevelFilter::Info`
+    /// * `package_name`: `env!("CARGO_PKG_NAME")`
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the log file.
+    ///
+    /// # Examples
+    /// ```
+    /// # use dablenutil::logging::LoggingConfig;
+    /// # use log::LevelFilter;
+    /// # use std::path::PathBuf;
+    /// let config = LoggingConfig::new(PathBuf::from("./path/to/log/file.log"));
+    /// assert_eq!(config.get_log_path(), PathBuf::from("./path/to/log/file.log"));
+    /// assert_eq!(config.get_term_level_filter(), log::LevelFilter::Info);
+    /// assert_eq!(config.get_file_level_filter(), log::LevelFilter::Info);
+    /// assert_eq!(config.get_package_name(), env!("CARGO_PKG_NAME"));
+    /// ```
+    pub fn new(path: PathBuf) -> Self {
+        Self {
+            log_path: path,
+            term_level_filter: LevelFilter::Info,
+            file_level_filter: LevelFilter::Info,
+            package_name: env!("CARGO_PKG_NAME").to_string(),
+        }
+    }
+
+    /// Get the path to the log file.
+    pub fn get_log_path(&self) -> &Path {
+        &self.log_path
+    }
+
+    /// Gets the current level filter for the terminal logger.
+    pub fn get_term_level_filter(&self) -> LevelFilter {
+        self.term_level_filter
+    }
+
+    /// Sets the level filter for the terminal logger.
+    ///
+    /// # Arguments
+    /// * `level` - The level filter to set.
+    ///
+    /// # Examples
+    /// ```
+    /// # use dablenutil::logging::LoggingConfig;
+    /// # use log::LevelFilter;
+    /// # use std::path::PathBuf;
+    /// let log_file = PathBuf::from("./path/to/log/file.log");
+    /// let mut config = LoggingConfig::new(log_file).term_level_filter(LevelFilter::Debug);
+    /// assert_eq!(config.get_term_level_filter(), log::LevelFilter::Debug);
+    pub fn term_level_filter(mut self, level: LevelFilter) -> Self {
+        self.term_level_filter = level;
+        self
+    }
+
+    /// Gets the current level filter for the file logger.
+    pub fn get_file_level_filter(&self) -> LevelFilter {
+        self.file_level_filter
+    }
+
+    /// Sets the level filter for the file logger.
+    ///
+    /// # Arguments
+    /// * `level` - The level filter to set.
+    ///
+    /// # Examples
+    /// ```
+    /// # use dablenutil::logging::LoggingConfig;
+    /// # use log::LevelFilter;
+    /// # use std::path::PathBuf;
+    /// let log_file = PathBuf::from("./path/to/log/file.log");
+    /// let mut config = LoggingConfig::new(log_file).file_level_filter(LevelFilter::Debug);
+    /// assert_eq!(config.get_file_level_filter(), log::LevelFilter::Debug);
+    /// ```
+    pub fn file_level_filter(mut self, level: LevelFilter) -> Self {
+        self.file_level_filter = level;
+        self
+    }
+
+    /// Gets the current package name.
+    pub fn get_package_name(&self) -> &str {
+        &self.package_name
+    }
+
+    /// Sets the package name to prepend to the log archives. If this is set to an empty string, then
+    /// nothing will be prepended to the log archives.
+    ///
+    /// # Arguments
+    /// * `name` - The package name to set.
+    ///
+    /// # Examples
+    /// ```
+    /// # use dablenutil::logging::LoggingConfig;
+    /// # use log::LevelFilter;
+    /// # use std::path::PathBuf;
+    /// let log_file = PathBuf::from("./path/to/log/file.log");
+    /// let mut config = LoggingConfig::new(log_file).package_name("my_package");
+    /// assert_eq!(config.get_package_name(), "my_package");
+    /// ```
+    pub fn package_name(mut self, name: &str) -> Self {
+        self.package_name = name.to_string();
+        self
+    }
+}
+
 /// Zip up the previous logs and start a new log file, returning
 /// the path to the new log file.
 ///

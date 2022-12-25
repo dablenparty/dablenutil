@@ -236,37 +236,39 @@ pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
 ///
 /// # Examples
 /// ```
-/// use dablenutil::logging::init_simple_logger;
+/// use dablenutil::logging::{LoggingConfig, init_simple_logger};
 ///
 /// # fn main() -> dablenutil::Result<()> {
 /// let path = std::path::Path::new("./path/to/file.log");
 /// # assert!(!path.exists());
-/// init_simple_logger(path, log::LevelFilter::Info)?;
+/// let config = LoggingConfig::new(path.to_path_buf());
+/// init_simple_logger(&config)?;
 /// log::info!("Hello, world!");
 /// # assert!(path.exists());
 /// # std::fs::remove_dir_all("path")?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn init_simple_logger(log_path: &Path, level_filter: LevelFilter) -> crate::Result<()> {
-    let config = simplelog::ConfigBuilder::new()
+pub fn init_simple_logger(config: &LoggingConfig) -> crate::Result<()> {
+    let simplelog_config = simplelog::ConfigBuilder::new()
         .set_time_format_custom(format_description!("[[[hour]:[minute]:[second]]"))
         .set_thread_mode(ThreadLogMode::Both)
         .set_target_level(LevelFilter::Off)
         .set_thread_level(LevelFilter::Error)
         .build();
+    let log_path = config.get_log_folder();
     log_path
         .parent()
         .map_or_else(|| Ok(()), |p| create_dir_if_not_exists(p))?;
     let log_file = fs::File::create(log_path)?;
     CombinedLogger::init(vec![
         TermLogger::new(
-            level_filter,
-            config.clone(),
+            config.get_term_level_filter(),
+            simplelog_config.clone(),
             TerminalMode::Mixed,
             ColorChoice::Auto,
         ),
-        WriteLogger::new(level_filter, config, log_file),
+        WriteLogger::new(config.get_file_level_filter(), simplelog_config, log_file),
     ])?;
     Ok(())
 }

@@ -20,6 +20,7 @@ use crate::create_dir_if_not_exists;
 
 pub struct LoggingConfig {
     log_folder: PathBuf,
+    filename: String,
     term_level_filter: LevelFilter,
     file_level_filter: LevelFilter,
     package_name: String,
@@ -42,8 +43,8 @@ impl LoggingConfig {
     /// # use dablenutil::logging::LoggingConfig;
     /// # use log::LevelFilter;
     /// # use std::path::PathBuf;
-    /// let config = LoggingConfig::new(PathBuf::from("./path/to/log/file.log"));
-    /// assert_eq!(config.get_log_folder(), PathBuf::from("./path/to/log/file.log"));
+    /// let config = LoggingConfig::new(PathBuf::from("./path/to/logs"));
+    /// assert_eq!(config.get_log_folder(), PathBuf::from("./path/to/logs"));
     /// assert_eq!(config.get_term_level_filter(), log::LevelFilter::Info);
     /// assert_eq!(config.get_file_level_filter(), log::LevelFilter::Info);
     /// assert_eq!(config.get_package_name(), env!("CARGO_PKG_NAME"));
@@ -51,6 +52,7 @@ impl LoggingConfig {
     pub fn new(path: PathBuf) -> Self {
         Self {
             log_folder: path,
+            filename: "latest.log".to_string(),
             term_level_filter: LevelFilter::Info,
             file_level_filter: LevelFilter::Info,
             package_name: env!("CARGO_PKG_NAME").to_string(),
@@ -65,6 +67,31 @@ impl LoggingConfig {
     /// Gets the current level filter for the terminal logger.
     pub fn get_term_level_filter(&self) -> LevelFilter {
         self.term_level_filter
+    }
+
+    /// Gets the current filename for the log file.
+    pub fn get_filename(&self) -> &str {
+        &self.filename
+    }
+
+    /// Sets the filename for the log file.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `filename` - The filename to set.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// # use dablenutil::logging::LoggingConfig;
+    /// # use log::LevelFilter;
+    /// # use std::path::PathBuf;
+    /// let log_folder = PathBuf::from("./path/to/logs");
+    /// let mut config = LoggingConfig::new(log_folder).filename("my_log_file.log");
+    /// # assert_eq!(config.get_filename(), "my_log_file.log");
+    pub fn filename<S: Into<String>>(mut self, filename: S) -> Self {
+        self.filename = filename.into();
+        self
     }
 
     /// Sets the level filter for the terminal logger.
@@ -144,8 +171,7 @@ impl LoggingConfig {
 ///
 /// # Arguments
 ///
-/// * `log_folder` - The path to the directory where the logs are stored.
-/// * `package_name` - An optional package name to prepend to the log archives.
+/// * `config` - The `LoggingConfig` to use.
 /// An underscore `_` will be appended to it as well. See the Examples for more.
 ///
 /// # Errors
@@ -227,8 +253,7 @@ pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
 ///
 /// # Arguments
 ///
-/// * `log_path` - The path to the log file.
-/// * `level_filter` - The log level to use.
+/// * `config` - The `LoggingConfig` to use.
 ///
 /// # Errors
 ///

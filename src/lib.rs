@@ -12,6 +12,7 @@
 //! * `tokio` - Enables the `tokio` module for async utils.
 
 #![warn(clippy::all, clippy::pedantic)]
+#![allow(clippy::uninlined_format_args, clippy::must_use_candidate, clippy::return_self_not_must_use)]
 
 use const_format::formatcp;
 use std::{env, error, fmt, fs::create_dir_all, io, path::Path};

@@ -23,7 +23,7 @@ pub struct LoggingConfig {
     filename: String,
     term_level_filter: LevelFilter,
     file_level_filter: LevelFilter,
-    package_name: String,
+    package_name: Option<String>,
 }
 
 impl LoggingConfig {
@@ -47,7 +47,7 @@ impl LoggingConfig {
     /// assert_eq!(config.get_log_folder(), PathBuf::from("./path/to/logs"));
     /// assert_eq!(config.get_term_level_filter(), log::LevelFilter::Info);
     /// assert_eq!(config.get_file_level_filter(), log::LevelFilter::Info);
-    /// assert_eq!(config.get_package_name(), env!("CARGO_PKG_NAME"));
+    /// assert_eq!(config.get_package_name(), Some(env!("CARGO_PKG_NAME")));
     /// ```
     pub fn new(path: PathBuf) -> Self {
         Self {
@@ -55,7 +55,7 @@ impl LoggingConfig {
             filename: "latest.log".to_string(),
             term_level_filter: LevelFilter::Info,
             file_level_filter: LevelFilter::Info,
-            package_name: env!("CARGO_PKG_NAME").to_string(),
+            package_name: Some(env!("CARGO_PKG_NAME").to_string()),
         }
     }
 
@@ -75,13 +75,13 @@ impl LoggingConfig {
     }
 
     /// Sets the filename for the log file.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `filename` - The filename to set.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// # use dablenutil::logging::LoggingConfig;
     /// # use log::LevelFilter;
@@ -137,8 +137,8 @@ impl LoggingConfig {
     }
 
     /// Gets the current package name.
-    pub fn get_package_name(&self) -> &str {
-        &self.package_name
+    pub fn get_package_name(&self) -> Option<&str> {
+        self.package_name.as_deref()
     }
 
     /// Sets the package name to prepend to the log archives. If this is set to an empty string, then
@@ -153,21 +153,18 @@ impl LoggingConfig {
     /// # use log::LevelFilter;
     /// # use std::path::PathBuf;
     /// let log_file = PathBuf::from("./path/to/log/file.log");
-    /// let mut config = LoggingConfig::new(log_file).package_name("my_package");
-    /// assert_eq!(config.get_package_name(), "my_package");
+    /// let mut config = LoggingConfig::new(log_file).package_name(Some("my_package"));
+    /// assert_eq!(config.get_package_name(), Some("my_package"));
     /// ```
-    pub fn package_name(mut self, name: &str) -> Self {
-        self.package_name = name.to_string();
+    pub fn package_name<S: Into<String>>(mut self, name: Option<S>) -> Self {
+        self.package_name = name.map(Into::into);
         self
     }
 }
 
-/// Zip up the previous logs and start a new log file, returning
-/// the path to the new log file.
+/// Compresses the log file found at `{config.log_folder}/{config.filename}`..
 ///
-/// The logs are zipped with `gzip` and `flate2`.
-///
-/// returns: `io::Result<PathBuf>`
+/// The logs are compressed with `gzip` and `flate2`.
 ///
 /// # Arguments
 ///
@@ -188,17 +185,18 @@ impl LoggingConfig {
 /// # use std::fs;
 ///
 /// # fn main() -> dablenutil::Result<()> {
-/// let log_path = PathBuf::from("./path/to/logs");
+/// let log_folder = PathBuf::from("./path/to/logs");
 /// // path cloned for testing purposes
-/// let config = LoggingConfig::new(log_path.clone());
-/// # assert!(!log_path.exists());
-/// let log_file = rotate_logs(&config)?;
+/// let config = LoggingConfig::new(log_folder.clone());
+/// # assert!(!log_folder.exists());
+/// rotate_logs(&config)?;
+/// let log_file = log_folder.join(config.get_filename());
 /// # assert!(log_file.ends_with("latest.log"));
-/// # assert!(log_path.exists());
+/// # assert!(log_folder.exists());
 /// # fs::write(&log_file, "Hello, world!")?;
-/// # let second_log_file = rotate_logs(&config)?;
-/// # let prefix = format!("{}_", config.get_package_name());
-/// # let zipped_archive_exists = log_path
+/// # rotate_logs(&config)?;
+/// # let prefix = format!("{}_", config.get_package_name().unwrap());
+/// # let zipped_archive_exists = log_folder
 /// #     .read_dir()?
 /// #     .filter_map(|r| r.ok())
 /// #     .any(|e| {
@@ -208,14 +206,15 @@ impl LoggingConfig {
 /// #         && encoded.ends_with(".log.gz")
 /// #     });
 /// # assert!(zipped_archive_exists);
-/// # fs::remove_dir_all(&log_path)?;
+/// # fs::remove_dir_all(&log_folder)?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
+pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<()> {
     let log_folder = config.get_log_folder();
-    create_dir_if_not_exists(&log_folder)?;
-    let latest_log_file = log_folder.join("latest.log");
+    create_dir_if_not_exists(log_folder)?;
+    let log_filename = config.get_filename();
+    let latest_log_file = log_folder.join(log_filename);
     if latest_log_file.exists() {
         let create_time = latest_log_file
             .metadata()?
@@ -223,11 +222,7 @@ pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
             .map_or_else(|_| Local::now(), DateTime::<Local>::from);
         let prefix = {
             let package_name = config.get_package_name();
-            if package_name.is_empty() {
-                String::new()
-            } else {
-                format!("{}_", package_name)
-            }
+            package_name.map_or(String::default(), |s| format!("{}_", s))
         };
         let dated_name = create_time
             .format(&format!("{}%Y-%m-%d_%H-%M-%S.log", prefix))
@@ -242,7 +237,7 @@ pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
         gz.finish()?;
         fs::remove_file(&latest_log_file)?;
     }
-    Ok(latest_log_file)
+    Ok(())
 }
 
 /// Initialize the logger with `simplelog`. Logs are outputted to the terminal
@@ -257,15 +252,14 @@ pub fn rotate_logs(config: &LoggingConfig) -> crate::Result<PathBuf> {
 ///
 /// # Errors
 ///
-/// An error is returned if the log files could not be created for some reason or if one
-/// occurs while zipping up the previous logs.
+/// An error is returned if the log files could not be created for some reason.
 ///
 /// # Examples
 /// ```
 /// # use dablenutil::logging::{LoggingConfig, init_simple_logger};
 ///
 /// # fn main() -> dablenutil::Result<()> {
-/// let path = std::path::PathBuf::from("./path/to/file.log");
+/// let path = std::path::PathBuf::from("./path/to/logs");
 /// # assert!(!path.exists());
 /// // path cloned for testing purposes
 /// let config = LoggingConfig::new(path.clone());
@@ -284,10 +278,8 @@ pub fn init_simple_logger(config: &LoggingConfig) -> crate::Result<()> {
         .set_thread_level(LevelFilter::Error)
         .build();
     let log_path = config.get_log_folder();
-    log_path
-        .parent()
-        .map_or_else(|| Ok(()), |p| create_dir_if_not_exists(p))?;
-    let log_file = fs::File::create(log_path)?;
+    create_dir_if_not_exists(log_path)?;
+    let log_file = fs::File::create(log_path.join(config.get_filename()))?;
     CombinedLogger::init(vec![
         TermLogger::new(
             config.get_term_level_filter(),
